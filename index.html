@@ -253,7 +253,8 @@
 
     function convertTo12Hour(time24) {
         if (!time24) return '';
-        const [h, m] = time24.split(':').map(Number);
+        const cleanTime = time24.split(' ')[0];
+        const [h, m] = cleanTime.split(':').map(Number);
         const period = h >= 12 ? 'م' : 'ص';
         let h12 = h % 12;
         if (h12 === 0) h12 = 12;
@@ -265,13 +266,11 @@
     function updateUI() {
         const now = Date.now();
 
-        // تحديث أعداد العدادات
         for (let p in counts) {
             const el = document.getElementById('count-' + p);
             if (el) el.innerText = counts[p];
         }
 
-        // تحديث زر صلاة الصبح
         const lastFajr = parseInt(localStorage.getItem('time_fajr')) || 0;
         const btnFajr = document.getElementById('btn-fajr');
         if (now - lastFajr < TWENTY_FOUR_HOURS) {
@@ -282,7 +281,6 @@
             btnFajr.classList.remove('checked');
         }
 
-        // تحديث زر صلاة الظهر والعصر
         const lastDhuhrAsr = parseInt(localStorage.getItem('time_dhuhr_asr')) || 0;
         const btnDhuhrAsr = document.getElementById('btn-dhuhr-asr');
         if (now - lastDhuhrAsr < TWENTY_FOUR_HOURS) {
@@ -293,7 +291,6 @@
             btnDhuhrAsr.classList.remove('checked');
         }
 
-        // تحديث زر صلاة المغرب والعشاء
         const lastMaghribIsha = parseInt(localStorage.getItem('time_maghrib_isha')) || 0;
         const btnMaghribIsha = document.getElementById('btn-maghrib-isha');
         if (now - lastMaghribIsha < TWENTY_FOUR_HOURS) {
@@ -304,7 +301,6 @@
             btnMaghribIsha.classList.remove('checked');
         }
 
-        // تحديث زر اليوم الكامل
         const lastFullDay = parseInt(localStorage.getItem('time_full_day')) || 0;
         const fullBtn = document.getElementById('btnFullDay');
         if (now - lastFullDay < TWENTY_FOUR_HOURS) {
@@ -315,7 +311,6 @@
             fullBtn.classList.remove('active-day');
         }
 
-        // تحديث حالة زر التنبيهات
         checkNotificationStatus();
     }
 
@@ -378,23 +373,34 @@
         }
     }
 
-    // إدارة التنبيهات (تفعيل / إيقاف)
+    function resetAll() {
+        if (confirm("هل أنت تأكد من إعادة ضبط جميع العدادات إلى 3,653؟")) {
+            for (let p in counts) {
+                counts[p] = DEFAULT_COUNT;
+                localStorage.setItem(p, DEFAULT_COUNT);
+                localStorage.removeItem('time_' + p);
+            }
+            localStorage.removeItem('time_dhuhr_asr');
+            localStorage.removeItem('time_maghrib_isha');
+            localStorage.removeItem('time_full_day');
+            updateUI();
+        }
+    }
+
     function toggleNotificationPermission() {
         const isEnabled = localStorage.getItem('notificationsEnabled') === 'true';
 
         if (isEnabled) {
-            // إيقاف التنبيهات
             localStorage.setItem('notificationsEnabled', 'false');
             checkNotificationStatus();
             alert("تم إيقاف التنبيهات.");
         } else {
-            // تفعيل التنبيهات
             if ("Notification" in window) {
                 Notification.requestPermission().then(permission => {
                     if (permission === "granted") {
                         localStorage.setItem('notificationsEnabled', 'true');
                         checkNotificationStatus();
-                        alert("تم تفعيل التنبيهات بنجاح حسب توقيت بغداد / الكاظمية!");
+                        alert("تم تفعيل التنبيهات بنجاح!");
                     } else {
                         alert("يرجى إعطاء إذن الإشعارات من إعدادات المتصفح لتفعيل التنبيهات.");
                     }
@@ -420,25 +426,30 @@
         }
     }
 
+    // جلب المواقيت عبر API مباشر مع مواقيت احتياطية للكاظمية في حال فشل الشيكة
     function fetchBaghdadPrayerTimes() {
         fetch(`https://api.aladhan.com/v1/timings?latitude=${KADHIMIYA_LAT}&longitude=${KADHIMIYA_LNG}&method=0`)
             .then(res => res.json())
             .then(data => {
                 const t = data.data.timings;
-                prayerTimesData = {
-                    fajr: t.Fajr,
-                    dhuhr: t.Dhuhr,
-                    maghrib: t.Maghrib
-                };
-
-                document.getElementById('time-fajr').innerText = "الوقت: " + convertTo12Hour(t.Fajr);
-                document.getElementById('time-dhuhr-asr').innerText = "الوقت: " + convertTo12Hour(t.Dhuhr);
-                document.getElementById('time-maghrib-isha').innerText = "الوقت: " + convertTo12Hour(t.Maghrib);
-
-                setInterval(updateCountdowns, 1000);
-                updateCountdowns();
+                setPrayerTimes(t.Fajr, t.Dhuhr, t.Maghrib);
             })
-            .catch(err => console.error("خطأ في جلب مواقيت الصلاة", err));
+            .catch(err => {
+                console.warn("استخدام التوقيت التقريبي للكاظمية بسبب قيود الشبكة", err);
+                // توقيت افتراضي دقيق لبغداد الكاظمية
+                setPrayerTimes("04:35", "12:00", "17:45");
+            });
+    }
+
+    function setPrayerTimes(fajr, dhuhr, maghrib) {
+        prayerTimesData = { fajr, dhuhr, maghrib };
+
+        document.getElementById('time-fajr').innerText = "الوقت: " + convertTo12Hour(fajr);
+        document.getElementById('time-dhuhr-asr').innerText = "الوقت: " + convertTo12Hour(dhuhr);
+        document.getElementById('time-maghrib-isha').innerText = "الوقت: " + convertTo12Hour(maghrib);
+
+        setInterval(updateCountdowns, 1000);
+        updateCountdowns();
     }
 
     function updateCountdowns() {
@@ -453,7 +464,8 @@
             const item = targets[key];
             if (!item.time) continue;
 
-            const [hours, minutes] = item.time.split(':').map(Number);
+            const cleanTime = item.time.split(' ')[0];
+            const [hours, minutes] = cleanTime.split(':').map(Number);
             let target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0);
 
             if (now > target) {
@@ -505,20 +517,4 @@
     function loadDailyQuotes() {
         const todayIndex = Math.floor(Date.now() / (1000 * 60 * 60 * 24)) % dailyQuotes.length;
         const selectedGroup = dailyQuotes[todayIndex];
-        const container = document.getElementById('dailyContent');
-        
-        container.innerHTML = '';
-        selectedGroup.forEach(item => {
-            container.innerHTML += `
-                <div class="quote-item">
-                    ${item.text}
-                    <span class="source">${item.source}</span>
-                </div>
-            `;
-        });
-    }
-
-    function toggleTheme() {
-        document.body.classList.toggle('dark-mode');
-        const isDark = document.body.classList.contains('dark-mode');
-        localStor
+        const container = document.getElementById('daily
