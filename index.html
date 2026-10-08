@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>متابعة قضاء الصلوات - بغداد الكاظمية</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --card-bg: #ffffff;
+            --text-color: #2c3e50;
+            --subtext-color: #7f8c8d;
+            --border-color: #e2e8f0;
+            --shadow: rgba(0,0,0,0.06);
+        }
+
+        body.dark-mode {
+            --bg-color: #121824;
+            --card-bg: #1e293b;
+            --text-color: #f1f5f9;
+            --subtext-color: #94a3b8;
+            --border-color: #334155;
+            --shadow: rgba(0,0,0,0.3);
+        }
+
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; transition: background 0.3s, color 0.3s; }
+        body { background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 15px; display: flex; justify-content: center; }
+        .container { max-width: 500px; width: 100%; text-align: center; }
+
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .theme-toggle, .notif-btn {
+            background: var(--card-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 8px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+            box-shadow: 0 2px 5px var(--shadow);
+        }
+
+        .athkar-card {
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: #ffffff;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            margin-bottom: 20px;
+            text-align: right;
+        }
+        .athkar-title {
+            text-align: center;
+            font-size: 19px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            padding-bottom: 8px;
+            color: #f1c40f;
+        }
+        .quote-item {
+            margin-bottom: 10px;
+            font-size: 15px;
+            line-height: 1.6;
+            background: rgba(255, 255, 255, 0.12);
+            padding: 10px 12px;
+            border-radius: 8px;
+        }
+        .source {
+            display: block;
+            font-size: 12px;
+            color: #bdc3c7;
+            margin-top: 4px;
+            text-align: left;
+        }
+
+        .location-tag {
+            font-size: 12px;
+            color: #bdc3c7;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .btn-full-day {
+            background: linear-gradient(135deg, #27ae60, #2dc997);
+            color: white;
+            border: none;
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 17px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(39, 174, 96, 0.3);
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+        .btn-full-day:active { transform: scale(0.98); }
+        .btn-full-day.active-day {
+            background: #1e8449 !important;
+            box-shadow: 0 0 12px rgba(39, 174, 96, 0.6);
+        }
+
+        .prayer-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-right: 6px solid #3498db;
+            border-top: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+            border-left: 1px solid var(--border-color);
+        }
+        .prayer-info { text-align: right; }
+        .prayer-name { font-size: 18px; font-weight: bold; color: var(--text-color); }
+        .prayer-time { font-size: 12px; color: #3498db; font-weight: bold; margin-top: 2px; }
+        .countdown-time { font-size: 12px; color: #e67e22; font-weight: bold; margin-top: 2px; }
+        .prayer-count { font-size: 13px; color: var(--subtext-color); margin-top: 4px; }
+        .prayer-count span { font-weight: bold; color: #e74c3c; font-size: 17px; }
+
+        .btn-pray {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 9px 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            min-width: 110px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            transition: all 0.3s;
+        }
+
+        .btn-pray.checked {
+            background-color: #27ae60 !important;
+        }
+
+        .controls { margin-top: 25px; }
+        .btn-reset {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <div class="top-bar">
+        <button class="notif-btn" onclick="requestNotificationPermission()" id="notifBtn">🔔 تفعيل التنبيهات</button>
+        <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙 الوضع الداكن</button>
+    </div>
+
+    <div class="athkar-card">
+        <div class="athkar-title">✨ العودة إلى الله والتوبة ✨</div>
+        <div class="location-tag">📍 التوقيت الشرعي: بغداد - الكاظمية المقدسة</div>
+        <div id="dailyContent"></div>
+        <div style="text-align: center; margin-top: 10px; font-weight: bold; color: #f1c40f;">
+            اللهم صل على محمد وآل محمد<br>
+            اللهم اغفر لي ذنوبي فإنه لا يغفر الذنوب إلا أنت
+        </div>
+    </div>
+
+    <button class="btn-full-day" id="btnFullDay" onclick="decrementAll()">✓ صليت يوم كامل قضاءً (الصلوات الخمس)</button>
+
+    <!-- صلاة الصبح -->
+    <div class="prayer-card">
+        <div class="prayer-info">
+            <div class="prayer-name">صلاة الصبح</div>
+            <div class="prayer-time" id="time-fajr">الوقت: جاري التحميل...</div>
+            <div class="countdown-time" id="countdown-fajr">متبقي: --:--:--</div>
+            <div class="prayer-count">المتبقي: <span id="count-fajr">3653</span> صلاة</div>
+        </div>
+        <button class="btn-pray" id="btn-fajr" onclick="decrementSingle('fajr')">صليت قضاءً</button>
+    </div>
+
+    <!-- صلاة الظهر والعصر (مجموعة) -->
+    <div class="prayer-card">
+        <div class="prayer-info">
+            <div class="prayer-name">صلاة الظهر والعصر</div>
+            <div class="prayer-time" id="time-dhuhr-asr">الوقت: جاري التحميل...</div>
+            <div class="countdown-time" id="countdown-dhuhr-asr">متبقي: --:--:--</div>
+            <div class="prayer-count">
+                الظهر: <span id="count-dhuhr">3653</span> | العصر: <span id="count-asr">3653</span>
+            </div>
+        </div>
+        <button class="btn-pray" id="btn-dhuhr-asr" onclick="decrementGroup('dhuhr', 'asr')">صليت قضاءً</button>
+    </div>
+
+    <!-- صلاة المغرب والعشاء (مجموعة) -->
+    <div class="prayer-card">
+        <div class="prayer-info">
+            <div class="prayer-name">صلاة المغرب والعشاء</div>
+            <div class="prayer-time" id="time-maghrib-isha">الوقت: جاري التحميل...</div>
+            <div class="countdown-time" id="countdown-maghrib-isha">متبقي: --:--:--</div>
+            <div class="prayer-count">
+                المغرب: <span id="count-maghrib">3653</span> | العشاء: <span id="count-isha">3653</span>
+            </div>
+        </div>
+        <button class="btn-pray" id="btn-maghrib-isha" onclick="decrementGroup('maghrib', 'isha')">صليت قضاءً</button>
+    </div>
+
+    <div class="controls">
+        <button class="btn-reset" onclick="resetAll()">إعادة ضبط العدادات إلى (3,653)</button>
+    </div>
+
+</div>
+
+<script>
+    const DEFAULT_COUNT = 3653;
+    const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+    let prayerTimesData = {};
+    let notifiedPrayers = {};
+
+    const KADHIMIYA_LAT = 33.3800;
+    const KADHIMIYA_LNG = 44.3400;
+
+    const dailyQuotes = [
+        [
+            { text: "﴿قُلْ يَا عِبَادِيَ الَّذِينَ أَسْرَفُوا عَلَىٰ أَنفُسِهِمْ لَا تَقْنَطُوا مِن رَّحْمَةِ اللَّهِ ۚ إِنَّ اللَّهَ يَغْفِرُ الذُّنُوبَ جَمِيعًا﴾", source: "[الزمر: 53]" },
+            { text: "عن رسول الله (صلّى الله عليه وآله): «التَّائِبُ مِنَ الذَّنْبِ كَمَنْ لا ذَنْبَ لَهُ».", source: "[الكافي]" }
+        ],
+        [
+            { text: "﴿وَتُوبُوا إِلَى اللَّهِ جَمِيعًا أَيُّهَ الْمُؤْمِنُونَ لَعَلَّكُمْ تُفْلِحُونَ﴾", source: "[النور: 31]" },
+            { text: "عن الإمام الباقر (عليه السلام): «إنّ الله تعالى أشدّ فرحاً بتوبة عبده من رجل أضلّ راحلته ونفقته في ليلة مظلماء فوجدها».", source: "[الكافي]" }
+        ],
+        [
+            { text: "﴿وَهُوَ الَّذِي يَقْبَلُ التَّوْبَةَ عَنْ عِبَادِهِ وَيَعْفُو عَنِ السَّيِّئَاتِ﴾", source: "[الشورى: 25]" },
+            { text: "عن الإمام علي (عليه السلام): «لا شَفِيعَ أَنْجَحُ مِنَ التَّوْبَةِ».", source: "[نهج البلاغة]" }
+        ]
+    ];
+
+    let counts = {
+        fajr: parseInt(localStorage.getItem('fajr')) || DEFAULT_COUNT,
+        dhuhr: parseInt(localStorage.getItem('dhuhr')) || DEFAULT_COUNT,
+        asr: parseInt(localStorage.getItem('asr')) || DEFAULT_COUNT,
+        maghrib: parseInt(localStorage.getItem('maghrib')) || DEFAULT_COUNT,
+        isha: parseInt(localStorage.getItem('isha')) || DEFAULT_COUNT
+    };
+
+    function convertTo12Hour(time24) {
+        if (!time24) return '';
+        const [h, m] = time24.split(':').map(Number);
+        const period = h >= 12 ? 'م' : 'ص';
+        let h12 = h % 12;
+        if (h12 === 0) h12 = 12;
+        const formattedH = String(h12).padStart(2, '0');
+        const formattedM = String(m).padStart(2, '0');
+        return `${formattedH}:${formattedM} ${period}`;
+    }
+
+    function updateUI() {
+        const now = Date.now();
+
+        // تحديث أعداد العدادات
+        for (let p in counts) {
+            const el = document.getElementById('count-' + p);
+            if (el) el.innerText = counts[p];
+        }
+
+        // تحديث زر صلاة الصبح
+        const lastFajr = parseInt(localStorage.getItem('time_fajr')) || 0;
+        const btnFajr = document.getElementById('btn-fajr');
+        if (now - lastFajr < TWENTY_FOUR_HOURS) {
+            btnFajr.innerHTML = "✅ صليت قضاءً";
+            btnFajr.classList.add('checked');
+        } else {
+            btnFajr.innerHTML = "صليت قضاءً";
+            btnFajr.classList.remove('checked');
+        }
+
+        // تحديث زر صلاة الظهر والعصر
+        const lastDhuhrAsr = parseInt(localStorage.getItem('time_dhuhr_asr')) || 0;
+        const btnDhuhrAsr = document.getElementById('btn-dhuhr-asr');
+        if (now - lastDhuhrAsr < TWENTY_FOUR_HOURS) {
+            btnDhuhrAsr.innerHTML = "✅ صليت قضاءً";
+            btnDhuhrAsr.classList.add('checked');
+        } else {
+            btnDhuhrAsr.innerHTML = "صليت قضاءً";
+            btnDhuhrAsr.classList.remove('checked');
+        }
+
+        // تحديث زر صلاة المغرب والعشاء
+        const lastMaghribIsha = parseInt(localStorage.getItem('time_maghrib_isha')) || 0;
+        const btnMaghribIsha = document.getElementById('btn-maghrib-isha');
+        if (now - lastMaghribIsha < TWENTY_FOUR_HOURS) {
+            btnMaghribIsha.innerHTML = "✅ صليت قضاءً";
+            btnMaghribIsha.classList.add('checked');
+        } else {
+            btnMaghribIsha.innerHTML = "صليت قضاءً";
+            btnMaghribIsha.classList.remove('checked');
+        }
+
+        // تحديث زر اليوم الكامل
+        const lastFullDay = parseInt(localStorage.getItem('time_full_day')) || 0;
+        const fullBtn = document.getElementById('btnFullDay');
+        if (now - lastFullDay < TWENTY_FOUR_HOURS) {
+            fullBtn.innerHTML = "✅ صليت يوم كامل قضاءً (الصلوات الخمس)";
+            fullBtn.classList.add('active-day');
+        } else {
+            fullBtn.innerHTML = "✓ صليت يوم كامل قضاءً (الصلوات الخمس)";
+            fullBtn.classList.remove('active-day');
+        }
+    }
+
+    function decrementSingle(prayer) {
+        const now = Date.now();
+        const lastTime = parseInt(localStorage.getItem('time_' + prayer)) || 0;
+
+        if (now - lastTime >= TWENTY_FOUR_HOURS) {
+            if (counts[prayer] > 0) {
+                counts[prayer]--;
+                localStorage.setItem(prayer, counts[prayer]);
+                localStorage.setItem('time_' + prayer, now);
+                updateUI();
+            }
+        } else {
+            alert("لقد قمت بتسجيل هذه الصلاة بالفعل خلال الـ 24 ساعة الماضية.");
+        }
+    }
+
+    function decrementGroup(p1, p2) {
+        const now = Date.now();
+        const key = `${p1}_${p2}`;
+        const lastTime = parseInt(localStorage.getItem('time_' + key)) || 0;
+
+        if (now - lastTime >= TWENTY_FOUR_HOURS) {
+            if (counts[p1] > 0) counts[p1]--;
+            if (counts[p2] > 0) counts[p2]--;
+
+            localStorage.setItem(p1, counts[p1]);
+            localStorage.setItem(p2, counts[p2]);
+            localStorage.setItem('time_' + key, now);
+            localStorage.setItem('time_' + p1, now);
+            localStorage.setItem('time_' + p2, now);
+            updateUI();
+        } else {
+            alert("لقد قمت بتسجيل هذه الصلوات بالفعل خلال الـ 24 ساعة الماضية.");
+        }
+    }
+
+    function decrementAll() {
+        const now = Date.now();
+        let changed = false;
+
+        for (let p in counts) {
+            if (counts[p] > 0) {
+                counts[p]--;
+                localStorage.setItem(p, counts[p]);
+                localStorage.setItem('time_' + p, now);
+                changed = true;
+            }
+        }
+
+        if (changed) {
+            localStorage.setItem('time_dhuhr_asr', now);
+            localStorage.setItem('time_maghrib_isha', now);
+            localStorage.setItem('time_full_day', now);
+            updateUI();
+        } else {
+            alert("لقد قمت بتسجيل جميع الصلوات لهذا اليوم بالفعل.");
+        }
+    }
+
+    function requestNotificationPermission() {
+        if ("Notification" in window) {
+            Notification.requestPermission().then(permission => {
+                if (permission === "granted") {
+                    document.getElementById('notifBtn').innerText = "🔔 التنبيهات مفعّلة";
+                    alert("تم تفعيل التنبيهات بنجاح حسب توقيت بغداد / الكاظمية!");
+                } else {
+                    alert("يرجى إعطاء إذن الإشعارات لتفعيل التنبيهات.");
+                }
+            });
+        } else {
+            alert("المتصفح لا يدعم الإشعارات.");
+        }
+    }
+
+    function fetchBaghdadPrayerTimes() {
+        fetch(`https://api.aladhan.com/v1/timings?latitude=${KADHIMIYA_LAT}&longitude=${KADHIMIYA_LNG}&method=0`)
+            .then(res => res.json())
+            .then(data => {
+                const t = data.data.timings;
+                prayerTimesData = {
+                    fajr: t.Fajr,
+                    dhuhr: t.Dhuhr,
+                    maghrib: t.Maghrib
+                };
+
+                document.getElementById('time-fajr').innerText = "الوقت: " + convertTo12Hour(t.Fajr);
+                document.getElementById('time-dhuhr-asr').innerText = "الوقت: " + convertTo12Hour(t.Dhuhr);
+                document.getElementById('time-maghrib-isha').innerText = "الوقت: " + convertTo12Hour(t.Maghrib);
+
+                setInterval(updateCountdowns, 1000);
+                updateCountdowns();
+            })
+            .catch(err => console.error("خطأ في جلب مواقيت الصلاة", err));
+    }
+
+    function updateCountdowns() {
+        const now = new Date();
+        const targets = {
+            fajr: { name: "صلاة الصبح", elem: "countdown-fajr", time: prayerTimesData.fajr },
+            dhuhr: { name: "صلاة الظهر والعصر", elem: "countdown-dhuhr-asr", time: prayerTimesData.dhuhr },
+            maghrib: { name: "صلاة المغرب والعشاء", elem: "countdown-maghrib-isha", time: prayerTimesData.maghrib }
+        };
+
+        for (let key in targets) {
+            const item = targets[key];
+            if (!item.time) continue;
+
+            const [hours, minutes] = item.time.split(':').map(Number);
+            let target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0);
+
+            if (now > target) {
+                target.setDate(target.getDate() + 1);
+            }
+
+            const diff = target - now;
+
+            const h = Math.floor(diff / (1000 * 60 * 60));
+            const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+            const formatH = String(h).padStart(2, '0');
+            const formatM = String(m).padStart(2, '0');
+            const formatS = String(s).padStart(2, '0');
+
+            const countdownElem = document.getElementById(item.elem);
+            
+            if (diff <= 1000 && !notifiedPrayers[key]) {
+                countdownElem.innerText = "⏳ حان الآن موعد الصلاة";
+                checkPrayerNotifications(key, item.name);
+            } else {
+                countdownElem.innerText = `متبقي: ${formatH}:${formatM}:${formatS}`;
+                if (diff > 60000) {
+                    notifiedPrayers[key] = false;
+                }
+            }
+        }
+    }
+
+    function checkPrayerNotifications(key, prayerName) {
+        if (Notification.permission !== "granted") return;
+
+        const notif = new Notification(`🕌 أذان ${prayerName} (توقيت الكاظمية)`, {
+            body: `حان الآن موعد ${prayerName}.. هل صليت اليوم صلاة القضاء؟ اضغط هنا للتسجيل.`,
+            icon: "https://cdn-icons-png.flaticon.com/512/2972/2972531.png",
+            requireInteraction: true
+        });
+
+        notif.onclick = function() {
+            window.focus();
+            this.close();
+        };
+
+        notifiedPrayers[key] = true;
+    }
+
+    function loadDailyQuotes() {
+        const todayIndex = Math.floor(Date.now() / (1000 * 60 * 60 * 24)) % dailyQuotes.length;
+        const selectedGroup = dailyQuotes[todayIndex];
+        const container = document.getElementById('dailyContent');
+        
+        container.innerHTML = '';
+        selectedGroup.forEach(item => {
+            container.innerHTML += `
+                <div class="quote-item">
+                    ${item.text}
+                    <span class="source">${item.source}</span>
+                </div>
+            `;
+        });
+    }
+
+    function toggleTheme() {
+        document.body.classList.toggle('dark-mode');
+        const isDark = document.body.classList.contains('dark-mode');
+        localStorage.setItem('darkMode', isDark);
+        document.getElementById('themeBtn').innerText = isDark ? "☀️ الوضع الفاتح" : "🌙 الوضع الداكن";
+    }
+
+    function checkTheme() {
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.body.classList.add('dark-mode');
+            document.getElementById('themeBtn').innerText = "☀️ الوضع الفاتح";
+        }
+    }
+
+    function resetAll() {
+        if (confirm("هل أنت تأكد من إعادة ضبط كل العدادات إلى 3653 صلاة؟")) {
+            for (let prayer in counts) {
+                counts[prayer] = DEFAULT_COUNT;
+                localStorage.setItem(prayer, DEFAULT_COUNT);
+                localStorage.removeItem('time_' + prayer);
+            }
+            localStorage.removeItem('time_dhuhr_asr');
+            localStorage.removeItem('time_maghrib_isha');
+            localStorage.removeItem('time_full_day');
+            updateUI();
+        }
+    }
+
+    checkTheme();
+    loadDailyQuotes();
+    updateUI();
+    fetchBaghdadPrayerTimes();
+</script>
+
+</body>
+</html>
+
+        
