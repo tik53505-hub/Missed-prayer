@@ -114,13 +114,19 @@
     font-size: 14px;
     font-weight: bold;
     cursor: pointer;
-    transition: transform 0.1s;
+    transition: all 0.3s;
   }
-  .action-btn:active { transform: scale(0.96); }
 
   .btn-pray {
     background: linear-gradient(135deg, #b8860b, #d4af37);
     color: #0a0a0a;
+  }
+
+  /* كلاس التحول للأخضر */
+  .btn-pray.success {
+    background: linear-gradient(135deg, #16a34a, #22c55e) !important;
+    color: white !important;
+    transform: scale(0.98);
   }
 
   .btn-undo {
@@ -129,43 +135,6 @@
     border: 1px solid #444;
     flex: 0.4;
   }
-
-  .modal {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.85);
-    z-index: 300;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-  }
-
-  .modal.show { display: flex; }
-
-  .modal-box {
-    background: #141414;
-    border: 2px solid #d4af37;
-    border-radius: 20px;
-    padding: 28px 20px;
-    text-align: center;
-    width: 100%;
-    max-width: 340px;
-    animation: pop 0.3s ease;
-  }
-
-  @keyframes pop {
-    from { transform: scale(0.85); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
-  }
-
-  .modal-icon { font-size: 55px; margin-bottom: 12px; }
-  .modal-title { font-size: 19px; font-weight: bold; margin-bottom: 8px; color: #d4af37; }
-  .modal-sub { font-size: 14px; color: #b8b8b8; margin-bottom: 20px; line-height: 1.6; }
-  .modal-actions { display: flex; gap: 10px; }
-  .modal-btn { flex: 1; padding: 13px; border: none; border-radius: 10px; font-size: 15px; font-weight: bold; cursor: pointer; }
-  .yes { background: #16a34a; color: white; }
-  .no { background: #2a2a2a; color: #e8e8e8; border: 1px solid #444; }
 
   .toast {
     position: fixed;
@@ -207,16 +176,15 @@
   </div>
 </div>
 
-<!-- زر اليوم الكامل (يمكن الضغط عليه كلما قضيت يوماً) -->
-<button class="full-day-btn" onclick="prayFullDay()">
+<button class="full-day-btn" onclick="prayFullDay(this)">
   ✓ قضيت يوماً كاملاً (فجر + ظهر وعصر + مغرب وعشاء)
 </button>
 
 <div id="prayersContainer"></div>
 
 <div class="info-note">
-  اضغط على "صليت قضاءً" لتسجيل صلاة قضيتها في أي وقت (لا يوجد قفل يومي)<br>
-  استخدم زر (↩ تراجع) إذا ضغطت بالخطأ.
+  اضغط على "صليت قضاءً" لتسجيل صلاة قضيتها في أي وقت<br>
+  سيتحول الزر للأخضر للتأكيد، ثم يعود لتتمكن من تسجيل صلاة أخرى.
 </div>
 
 <div class="toast" id="toast"></div>
@@ -281,10 +249,10 @@ function render() {
         '<div class="prayer-name">' + p.icon + ' ' + p.name + '</div>' +
         '<div class="time-info">' + timeDisplay + '</div>' +
       '</div>' +
-      '<div class="remaining">المتبقي: <span class="num">' + 
+      '<div class="remaining">المتبقي: <span class="num" id="count-' + p.id + '">' + 
         data[p.id].toLocaleString('ar-EG') + '</span> صلاة</div>' +
       '<div class="prayer-actions">' +
-        '<button class="action-btn btn-pray" onclick="pray(\'' + p.id + '\')">' + btnText + '</button>' +
+        '<button class="action-btn btn-pray" id="btn-' + p.id + '" onclick="pray(\'' + p.id + '\', this)">' + btnText + '</button>' +
         '<button class="action-btn btn-undo" onclick="undo(\'' + p.id + '\')" title="تراجع">↩</button>' +
       '</div>' +
     '</div>';
@@ -294,11 +262,27 @@ function render() {
 }
 
 /* ═══════════ الإجراءات ═══════════ */
-function pray(id) {
+function pray(id, btn) {
   const p = prayers.find(x => x.id === id);
   if (data[id] >= p.count) {
     data[id] -= p.count;
     save();
+    
+    // تحديث الرقم فوراً في الشاشة
+    document.getElementById('count-' + id).textContent = data[id].toLocaleString('ar-EG');
+    
+    // تغيير لون الزر إلى الأخضر مؤقتاً
+    if (btn) {
+      const originalText = btn.innerHTML;
+      btn.classList.add('success');
+      btn.innerHTML = '✓ تم التسجيل';
+      
+      setTimeout(() => {
+        btn.classList.remove('success');
+        btn.innerHTML = originalText;
+      }, 1500); // يعود لطبيعته بعد 1.5 ثانية
+    }
+    
     showToast('✓ تم تسجيل ' + p.name + ' — المتبقي: ' + data[id]);
   } else {
     showToast('🎉 لا توجد صلوات متبقية!');
@@ -309,10 +293,11 @@ function undo(id) {
   const p = prayers.find(x => x.id === id);
   data[id] += p.count;
   save();
+  document.getElementById('count-' + id).textContent = data[id].toLocaleString('ar-EG');
   showToast('↩ تم التراجع — المتبقي: ' + data[id]);
 }
 
-function prayFullDay() {
+function prayFullDay(btn) {
   let done = 0;
   prayers.forEach(p => {
     if (data[p.id] >= p.count) {
@@ -322,13 +307,34 @@ function prayFullDay() {
   });
   save();
   
+  // تحديث الأرقام في الشاشة
+  prayers.forEach(p => {
+    const el = document.getElementById('count-' + p.id);
+    if (el) el.textContent = data[p.id].toLocaleString('ar-EG');
+  });
+
+  // تأثير أخضر لزر اليوم الكامل
+  if (btn && done > 0) {
+    const originalText = btn.innerHTML;
+    btn.style.background = '#16a34a';
+    btn.style.borderColor = '#16a34a';
+    btn.style.color = 'white';
+    btn.innerHTML = '✓ تم تسجيل اليوم كاملاً';
+    
+    setTimeout(() => {
+      btn.style.background = 'linear-gradient(135deg, #0f766e 0%, #115e59 100%)';
+      btn.style.borderColor = '#d4af37';
+      btn.style.color = '#d4af37';
+      btn.innerHTML = originalText;
+    }, 1500);
+  }
+  
   if (done === prayers.length) showToast('🎉 ما شاء الله! تم تسجيل قضاء يوم كامل');
   else showToast('تم تسجيل ' + done + ' مجموعة (الباقي صفر)');
 }
 
 function save() {
   localStorage.setItem('salahData_final', JSON.stringify(data));
-  render();
 }
 
 /* ═══════════ Toast ═══════════ */
